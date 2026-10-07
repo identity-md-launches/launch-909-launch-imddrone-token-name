@@ -1,0 +1,31 @@
+{
+  "kind": "univ4_hook",
+  "hook": {
+    "contract": "DroneHook",
+    "constructorArgs": [
+      "$poolManager",
+      "0xd34a99bc0f67ae1bbd63c660e6d0b0dd03e263b7",
+      "$token"
+    ],
+    "permissions": [
+      "beforeInitialize",
+      "beforeSwap",
+      "afterSwap",
+      "beforeSwapReturnDelta",
+      "afterSwapReturnDelta"
+    ]
+  },
+  "token": {
+    "contract": "DroneToken",
+    "name": "imdDRONE",
+    "symbol": "DRONE",
+    "decimals": 18
+  },
+  "pool": {
+    "pairedCurrency": "0xd34a99bc0f67ae1bbd63c660e6d0b0dd03e263b7",
+    "fee": 12500,
+    "tickSpacing": 60,
+    "initialPrice": "79228162514264337593543950336"
+  },
+  "notes": "Ethereum mainnet. Direct CREATE2 DroneHook; permission mask 8396. Static 1.25% LP fee plus IMD-only hook fee; 4000 to 300 bps over 3600 seconds. Initial sqrtPriceX96 assumes 1:1 minor units. Configure the launch request with poolBps=8000 and remainderTo=requester, assuming 1000 bps network allocation, leaving 1000 bps (100 million DRONE) with the requester for the separately deployed imdDRONES reward contract. No NFT integration or token mint authority. Requester address, allocation and economic opening price require deployment-time confirmation. See README.md and docs/SECURITY_REVIEW.md for accounting, verification and release responsibilities."
+}
