@@ -12,6 +12,7 @@ import {SwapParams} from "v4-core/src/types/PoolOperation.sol";
 import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
+import {ProtocolFeeLibrary} from "v4-core/src/libraries/ProtocolFeeLibrary.sol";
 import {DroneToken} from "../../src/DroneToken.sol";
 import {DroneHook} from "../../src/DroneHook.sol";
 import {DeployDrone} from "../../script/DeployDrone.sol";
@@ -124,10 +125,31 @@ abstract contract HookFixture is Test {
             if (logs[i].emitter == address(manager) && logs[i].topics[0] == SWAP_EVENT) {
                 uint24 fee;
                 (a, b,,,, fee) = abi.decode(logs[i].data, (int128, int128, uint160, uint128, int24, uint24));
-                assertEq(fee, 12500, "manager's swap used static LP fee");
+                _assertSwapFeeIsStaticLpPlusProtocol(fee, a, b);
                 return (a, b);
             }
         }
         revert("missing swap event");
+    }
+
+    /// @dev The Swap event carries the manager's combined swap fee: the static 12500 LP fee, or that LP
+    /// fee composed with the directional protocol fee when one is set. A hook override would show up here.
+    function _assertSwapFeeIsStaticLpPlusProtocol(uint24 fee, int128 amount0, int128 amount1) internal view {
+        (,, uint24 protocolFee, uint24 lp) = manager.getSlot0(key.toId());
+        assertEq(lp, 12500, "static LP fee unchanged");
+        if (protocolFee == 0) {
+            assertEq(fee, 12500, "manager's swap used static LP fee");
+            return;
+        }
+        uint24 zeroForOneFee =
+            ProtocolFeeLibrary.calculateSwapFee(ProtocolFeeLibrary.getZeroForOneFee(protocolFee), lp);
+        uint24 oneForZeroFee =
+            ProtocolFeeLibrary.calculateSwapFee(ProtocolFeeLibrary.getOneForZeroFee(protocolFee), lp);
+        if (amount0 == 0 && amount1 == 0) {
+            assertTrue(fee == zeroForOneFee || fee == oneForZeroFee, "swap fee is not LP plus protocol");
+        } else {
+            bool zeroForOne = amount0 < 0 || amount1 > 0;
+            assertEq(fee, zeroForOne ? zeroForOneFee : oneForZeroFee, "swap fee is not LP plus protocol");
+        }
     }
 }
